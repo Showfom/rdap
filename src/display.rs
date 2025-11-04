@@ -496,15 +496,6 @@ fn display_entity(entity: &Entity, verbose: bool) {
                 println!("{}: {}", "Country".white(), addr.country.green());
             }
         }
-        
-        // Display all vCard properties in verbose mode
-        if verbose {
-            for prop in vcard.properties() {
-                if !["fn", "email", "tel", "org", "adr"].contains(&prop.name.as_str()) {
-                    println!("{}: {:?}", prop.name.white(), prop.value);
-                }
-            }
-        }
     }
     
     // Status
