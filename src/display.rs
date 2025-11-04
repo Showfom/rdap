@@ -2,6 +2,7 @@
 
 use crate::models::*;
 use colored::*;
+use std::collections::HashMap;
 
 /// Display trait for RDAP objects
 pub trait RdapDisplay {
@@ -206,11 +207,18 @@ impl RdapDisplay for IpNetwork {
             println!("{}: {}", event.action.white(), event.date.normal());
         }
         
-        // Entities
+        // Entities - deduplicate and display
         if !self.entities.is_empty() {
             println!();
-            for entity in &self.entities {
-                display_entity(entity, verbose);
+            let entity_map = collect_entities(&self.entities);
+            let mut handles: Vec<_> = entity_map.keys().collect();
+            handles.sort();
+            
+            for handle in handles {
+                if let Some(entity) = entity_map.get(handle) {
+                    display_entity(entity, verbose);
+                    println!();
+                }
             }
         }
         
@@ -282,11 +290,18 @@ impl RdapDisplay for Autnum {
             println!("{}: {}", action.white(), event.date.normal());
         }
         
-        // Entities
+        // Entities - deduplicate and display
         if !self.entities.is_empty() {
             println!();
-            for entity in &self.entities {
-                display_entity(entity, verbose);
+            let entity_map = collect_entities(&self.entities);
+            let mut handles: Vec<_> = entity_map.keys().collect();
+            handles.sort();
+            
+            for handle in handles {
+                if let Some(entity) = entity_map.get(handle) {
+                    display_entity(entity, verbose);
+                    println!();
+                }
             }
         }
         
@@ -319,7 +334,34 @@ impl RdapDisplay for Autnum {
 
 impl RdapDisplay for Entity {
     fn display(&self, verbose: bool) {
-        display_entity(self, verbose);
+        // If this entity has nested entities, collect and deduplicate them
+        if !self.entities.is_empty() {
+            // Display main entity first
+            display_entity(self, verbose);
+            println!();
+            
+            // Collect and display all nested entities
+            let entity_map = collect_entities(&self.entities);
+            let mut handles: Vec<_> = entity_map.keys().collect();
+            handles.sort();
+            
+            for handle in handles {
+                if let Some(entity) = entity_map.get(handle) {
+                    display_entity(entity, verbose);
+                    println!();
+                }
+            }
+        } else {
+            // No nested entities, just display this one
+            display_entity(self, verbose);
+        }
+        
+        // Display notices (for top-level entity response)
+        if verbose && !self.notices.is_empty() {
+            for notice in &self.notices {
+                display_notice(notice);
+            }
+        }
     }
 }
 
@@ -352,11 +394,18 @@ impl RdapDisplay for Nameserver {
             println!("{}: {}", event.action.white(), event.date.normal());
         }
         
-        // Entities
+        // Entities - deduplicate and display
         if !self.entities.is_empty() {
             println!();
-            for entity in &self.entities {
-                display_entity(entity, verbose);
+            let entity_map = collect_entities(&self.entities);
+            let mut handles: Vec<_> = entity_map.keys().collect();
+            handles.sort();
+            
+            for handle in handles {
+                if let Some(entity) = entity_map.get(handle) {
+                    display_entity(entity, verbose);
+                    println!();
+                }
             }
         }
         
@@ -446,6 +495,58 @@ impl RdapDisplay for HelpResponse {
 
 // Helper functions
 
+/// Collect all entities with deduplication and merging
+fn collect_entities(entities: &[Entity]) -> HashMap<String, Entity> {
+    let mut entity_map: HashMap<String, Entity> = HashMap::new();
+    
+    fn collect_recursive(entities: &[Entity], map: &mut HashMap<String, Entity>) {
+        for entity in entities {
+            if let Some(handle) = &entity.handle {
+                // Merge with existing or insert new
+                map.entry(handle.clone())
+                    .and_modify(|existing| {
+                        // Merge roles
+                        for role in &entity.roles {
+                            if !existing.roles.contains(role) {
+                                existing.roles.push(role.clone());
+                            }
+                        }
+                        // Update vcard if missing
+                        if existing.vcard.is_none() && entity.vcard.is_some() {
+                            existing.vcard = entity.vcard.clone();
+                        }
+                        // Merge other fields if needed
+                        if existing.port43.is_none() {
+                            existing.port43 = entity.port43.clone();
+                        }
+                        for event in &entity.events {
+                            if !existing.events.iter().any(|e| e.action == event.action && e.date == event.date) {
+                                existing.events.push(event.clone());
+                            }
+                        }
+                        for link in &entity.links {
+                            if !existing.links.iter().any(|l| l.href == link.href) {
+                                existing.links.push(link.clone());
+                            }
+                        }
+                        for status in &entity.status {
+                            if !existing.status.contains(status) {
+                                existing.status.push(status.clone());
+                            }
+                        }
+                    })
+                    .or_insert_with(|| entity.clone());
+                
+                // Recursively collect nested entities
+                collect_recursive(&entity.entities, map);
+            }
+        }
+    }
+    
+    collect_recursive(entities, &mut entity_map);
+    entity_map
+}
+
 fn display_entity(entity: &Entity, verbose: bool) {
     // Entity header
     if let Some(handle) = &entity.handle {
@@ -474,26 +575,32 @@ fn display_entity(entity: &Entity, verbose: bool) {
         }
         
         if let Some(addr) = vcard.address() {
-            if !addr.po_box.is_empty() {
-                println!("{}: {}", "PO Box".white(), addr.po_box.normal());
-            }
-            if !addr.extended.is_empty() {
-                println!("{}: {}", "Extended Address".white(), addr.extended.normal());
-            }
-            if !addr.street.is_empty() {
-                println!("{}: {}", "Street".white(), addr.street.normal());
-            }
-            if !addr.locality.is_empty() {
-                println!("{}: {}", "Locality".white(), addr.locality.normal());
-            }
-            if !addr.region.is_empty() {
-                println!("{}: {}", "Region".white(), addr.region.normal());
-            }
-            if !addr.postal_code.is_empty() {
-                println!("{}: {}", "Postal Code".white(), addr.postal_code.normal());
-            }
-            if !addr.country.is_empty() {
-                println!("{}: {}", "Country".white(), addr.country.green());
+            // If there's a pre-formatted label, use that
+            if let Some(label) = &addr.label {
+                println!("{}: {}", "Address".white(), label.normal());
+            } else {
+                // Otherwise, show individual components
+                if !addr.po_box.is_empty() {
+                    println!("{}: {}", "PO Box".white(), addr.po_box.normal());
+                }
+                if !addr.extended.is_empty() {
+                    println!("{}: {}", "Extended Address".white(), addr.extended.normal());
+                }
+                if !addr.street.is_empty() {
+                    println!("{}: {}", "Street".white(), addr.street.normal());
+                }
+                if !addr.locality.is_empty() {
+                    println!("{}: {}", "Locality".white(), addr.locality.normal());
+                }
+                if !addr.region.is_empty() {
+                    println!("{}: {}", "Region".white(), addr.region.normal());
+                }
+                if !addr.postal_code.is_empty() {
+                    println!("{}: {}", "Postal Code".white(), addr.postal_code.normal());
+                }
+                if !addr.country.is_empty() {
+                    println!("{}: {}", "Country".white(), addr.country.green());
+                }
             }
         }
     }
@@ -518,21 +625,22 @@ fn display_entity(entity: &Entity, verbose: bool) {
         println!("{}: {}", public_id.id_type.white(), public_id.identifier.cyan());
     }
     
-    // Nested entities
-    if !entity.entities.is_empty() && verbose {
-        for sub_entity in &entity.entities {
-            println!();
-            display_entity(sub_entity, verbose);
+    // Links (always show self link)
+    for link in &entity.links {
+        if let Some(rel) = &link.rel {
+            if rel == "self" {
+                println!("{}: {}", "Link".dimmed(), link.href.cyan());
+            }
         }
     }
     
-    // Links, Remarks
+    // More details in verbose mode
     if verbose {
         for link in &entity.links {
             if let Some(rel) = &link.rel {
-                println!("{}: {} ({})", "Link".white(), link.href.cyan(), rel.dimmed());
-            } else {
-                println!("{}: {}", "Link".white(), link.href.cyan());
+                if rel != "self" {
+                    println!("{}: {} ({})", "Link".white(), link.href.cyan(), rel.dimmed());
+                }
             }
         }
         for remark in &entity.remarks {

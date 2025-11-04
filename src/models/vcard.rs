@@ -55,9 +55,16 @@ impl VCard {
     /// Get address components
     pub fn address(&self) -> Option<VCardAddress> {
         let prop = self.properties.iter().find(|p| p.name == "adr")?;
+        
+        // Check for label parameter (pre-formatted address)
+        let label = prop.parameters.get("label")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        
         if let VCardValue::Structured(parts) = &prop.value {
             if parts.len() >= 7 {
                 return Some(VCardAddress {
+                    label,
                     po_box: parts[0].to_string(),
                     extended: parts[1].to_string(),
                     street: parts[2].to_string(),
@@ -148,9 +155,10 @@ impl VCardValue {
     }
 }
 
-/// Parsed address
+/// vCard address
 #[derive(Debug, Clone)]
 pub struct VCardAddress {
+    pub label: Option<String>,
     pub po_box: String,
     pub extended: String,
     pub street: String,
