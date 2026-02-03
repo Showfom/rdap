@@ -1,0 +1,11 @@
+{
+  "bootstrap": {
+    "dns": "https://data.iana.org/rdap/dns.json",
+    "asn": "https://data.iana.org/rdap/asn.json",
+    "ipv4": "https://data.iana.org/rdap/ipv4.json",
+    "ipv6": "https://data.iana.org/rdap/ipv6.json"
+  },
+  "cache": {
+    "ttl_seconds": 86400
+  }
+}

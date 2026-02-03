@@ -1,6 +1,7 @@
 //! RDAP request types and builders
 
 use crate::error::Result;
+use crate::ip;
 use std::fmt;
 use url::Url;
 
@@ -9,6 +10,8 @@ use url::Url;
 pub enum QueryType {
     /// Domain name query
     Domain,
+    /// TLD (top-level domain) query - queries IANA for TLD info
+    Tld,
     /// IP address query
     Ip,
     /// Autonomous System Number query
@@ -39,6 +42,7 @@ impl fmt::Display for QueryType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             QueryType::Domain => "domain",
+            QueryType::Tld => "tld",
             QueryType::Ip => "ip",
             QueryType::Autnum => "autnum",
             QueryType::Entity => "entity",
@@ -83,10 +87,15 @@ impl RdapRequest {
     /// Build the full RDAP URL
     pub fn build_url(&self, base_url: &Url) -> Result<Url> {
         let path = match self.query_type {
-            QueryType::Domain => format!("domain/{}", urlencoding::encode(&self.query)),
+            QueryType::Domain | QueryType::Tld => format!("domain/{}", urlencoding::encode(&self.query)),
             QueryType::Ip => format!("ip/{}", self.query),
             QueryType::Autnum => {
-                let asn = self.query.trim_start_matches("AS").trim_start_matches("as");
+                // Case-insensitive strip of "AS" prefix
+                let asn = if self.query.to_uppercase().starts_with("AS") {
+                    &self.query[2..]
+                } else {
+                    &self.query
+                };
                 format!("autnum/{}", asn)
             }
             QueryType::Entity => format!("entity/{}", urlencoding::encode(&self.query)),
@@ -120,23 +129,46 @@ impl RdapRequest {
     
     /// Detect query type from string
     pub fn detect_type(query: &str) -> Result<QueryType> {
+        Self::detect_type_with_tld_check(query, |_| false)
+    }
+
+    /// Detect query type from string with TLD check
+    pub fn detect_type_with_tld_check<F>(query: &str, is_tld: F) -> Result<QueryType>
+    where
+        F: Fn(&str) -> bool,
+    {
         // Check for AS number
-        if query.to_uppercase().starts_with("AS") {
-            if query[2..].chars().all(|c| c.is_ascii_digit()) {
+        if query.to_uppercase().starts_with("AS")
+            && query[2..].chars().all(|c| c.is_ascii_digit()) {
                 return Ok(QueryType::Autnum);
             }
-        }
-        
+
         // Check for pure number (AS number without AS prefix)
+        // But not if it looks like an IP (e.g., large numbers that could be IPs)
         if query.chars().all(|c| c.is_ascii_digit()) {
+            // Numbers > 4294967295 can't be AS numbers or IPs
+            if let Ok(n) = query.parse::<u64>() {
+                if n <= 4294967295 {
+                    // Could be AS number or IP in numeric form
+                    // Treat as AS number if it's a reasonable AS number range
+                    if n <= 4294967294 {
+                        return Ok(QueryType::Autnum);
+                    }
+                }
+            }
             return Ok(QueryType::Autnum);
         }
-        
-        // Check for IP address (simple heuristic)
-        if query.contains(':') || query.chars().all(|c| c.is_ascii_digit() || c == '.') {
+
+        // Check for IP address or CIDR (using ip module)
+        if ip::is_ip_like(query) {
             return Ok(QueryType::Ip);
         }
-        
+
+        // Check if it's a single word that's a valid TLD (no dots)
+        if !query.contains('.') && is_tld(query) {
+            return Ok(QueryType::Tld);
+        }
+
         // Default to domain
         Ok(QueryType::Domain)
     }

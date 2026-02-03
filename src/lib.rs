@@ -11,16 +11,21 @@
 //! - Disk and memory caching
 //! - Async/await support
 //! - Type-safe JSON parsing
+//! - Configurable bootstrap URLs
+//! - Custom TLD overrides
 
 pub mod bootstrap;
 pub mod cache;
 pub mod client;
+pub mod config;
 pub mod display;
 pub mod error;
+pub mod ip;
 pub mod models;
 pub mod request;
 
 pub use client::RdapClient;
+pub use config::Config;
 pub use error::{RdapError, Result};
 pub use models::*;
 pub use request::{QueryType, RdapRequest};
