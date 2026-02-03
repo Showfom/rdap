@@ -52,12 +52,6 @@ cargo build --release
 sudo cp target/release/rdap /usr/local/bin/
 ```
 
-### Using Cargo
-
-```bash
-cargo install rdap
-```
-
 ### Debian / Ubuntu
 
 ```bash
