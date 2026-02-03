@@ -168,6 +168,7 @@ Mountain View CA 94043
 United States of America (the)
 ```
 
+<<<<<<< HEAD
 ### IP Query (with CIDR support)
 
 ```bash
@@ -184,6 +185,9 @@ IP Version: v4
 Name: GOGL
 ...
 ```
+=======
+### IP Query
+>>>>>>> a367f2a4778627b8efe8d658b31c5f732bdf77da
 
 ```bash
 $ rdap 8.8.8.8
