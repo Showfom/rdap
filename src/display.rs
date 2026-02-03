@@ -9,6 +9,11 @@ pub trait RdapDisplay {
     fn display(&self, verbose: bool);
 }
 
+/// Extended display trait with query context
+pub trait RdapDisplayWithQuery {
+    fn display_with_query(&self, query: &str, verbose: bool);
+}
+
 impl RdapDisplay for RdapObject {
     fn display(&self, verbose: bool) {
         match self {
@@ -23,6 +28,116 @@ impl RdapDisplay for RdapObject {
             RdapObject::NameserverSearch(ns) => ns.display(verbose),
             RdapObject::Help(h) => h.display(verbose),
         }
+    }
+}
+
+impl RdapDisplayWithQuery for RdapObject {
+    fn display_with_query(&self, query: &str, verbose: bool) {
+        match self {
+            RdapObject::Domain(d) => d.display_with_query(query, verbose),
+            RdapObject::IpNetwork(ip) => ip.display_with_query(query, verbose),
+            RdapObject::Autnum(a) => a.display_with_query(query, verbose),
+            _ => self.display(verbose),
+        }
+    }
+}
+
+/// Extract contact email by role from entities
+fn find_contact_by_role(entities: &[Entity], role: &str) -> Option<String> {
+    for entity in entities {
+        // Check if this entity has the specified role
+        if entity.roles.iter().any(|r| r.to_lowercase() == role.to_lowercase()) {
+            if let Some(vcard) = &entity.vcard {
+                if let Some(email) = vcard.email() {
+                    return Some(email.to_string());
+                }
+            }
+        }
+        // Recursively check nested entities
+        if let Some(email) = find_contact_by_role(&entity.entities, role) {
+            return Some(email);
+        }
+    }
+    None
+}
+
+/// Extract abuse contact email from entities
+fn find_abuse_contact(entities: &[Entity]) -> Option<String> {
+    find_contact_by_role(entities, "abuse")
+}
+
+/// Display abuse contact for IP network
+/// Returns true if contact was printed
+pub fn display_ip_abuse_contact(ip: &IpNetwork, query: &str) -> bool {
+    if query.is_empty() {
+        return false;
+    }
+    if let Some(abuse_email) = find_abuse_contact(&ip.entities) {
+        println!("Abuse contact for `{}` is `{}`", query.cyan().bold(), abuse_email.yellow().bold());
+        println!();
+        return true;
+    }
+    false
+}
+
+/// Display abuse contact for AS number
+/// Returns true if contact was printed
+pub fn display_asn_abuse_contact(asn: &Autnum, query: &str) -> bool {
+    if query.is_empty() {
+        return false;
+    }
+    if let Some(abuse_email) = find_abuse_contact(&asn.entities) {
+        println!("Abuse contact for `{}` is `{}`", query.cyan().bold(), abuse_email.yellow().bold());
+        println!();
+        return true;
+    }
+    false
+}
+
+/// Display contact info for a domain (abuse for domains, admin/tech for TLDs)
+/// Returns true if any contact was printed
+pub fn display_domain_contacts(domain: &Domain, query: &str, is_tld: bool) -> bool {
+    if query.is_empty() {
+        return false;
+    }
+
+    let mut printed = false;
+
+    if is_tld {
+        // TLD query - show administrative and technical contacts
+        if let Some(admin_email) = find_contact_by_role(&domain.entities, "administrative") {
+            println!("Administrative contact for `{}` is `{}`", query.cyan().bold(), admin_email.yellow().bold());
+            printed = true;
+        }
+        if let Some(tech_email) = find_contact_by_role(&domain.entities, "technical") {
+            if printed {
+                println!(); // Add blank line between contacts
+            }
+            println!("Technical contact for `{}` is `{}`", query.cyan().bold(), tech_email.yellow().bold());
+            printed = true;
+        }
+    } else {
+        // Domain query - show abuse contact
+        if let Some(abuse_email) = find_abuse_contact(&domain.entities) {
+            println!("Abuse contact for `{}` is `{}`", query.cyan().bold(), abuse_email.yellow().bold());
+            printed = true;
+        }
+    }
+
+    if printed {
+        println!();
+    }
+    printed
+}
+
+impl RdapDisplayWithQuery for Domain {
+    fn display_with_query(&self, query: &str, verbose: bool) {
+        // Display contact info first based on query type
+        let is_tld = !query.is_empty() && !query.contains('.');
+        display_domain_contacts(self, query, is_tld);
+
+        // Continue with regular display
+        self.display(verbose);
     }
 }
 
@@ -163,57 +278,65 @@ impl RdapDisplay for Domain {
 
 impl RdapDisplay for IpNetwork {
     fn display(&self, verbose: bool) {
+        self.display_with_query("", verbose);
+    }
+}
+
+impl RdapDisplayWithQuery for IpNetwork {
+    fn display_with_query(&self, _query: &str, verbose: bool) {
+        // Note: Abuse contact is now displayed before "Query from" in main.rs
+        // This method is kept for compatibility but contact display is handled separately
         if let Some(handle) = &self.handle {
             println!("{}: {}", "Handle".white(), handle.normal());
         }
-        
+
         if let (Some(start), Some(end)) = (&self.start_address, &self.end_address) {
             println!("{}: {}", "Start Address".white(), start.cyan());
             println!("{}: {}", "End Address".white(), end.cyan());
         }
-        
+
         if let Some(ip_ver) = &self.ip_version {
             println!("{}: {}", "IP Version".white(), format!("v{}", ip_ver).normal());
         }
-        
+
         if let Some(name) = &self.name {
             println!("{}: {}", "Name".white(), name.cyan());
         }
-        
+
         if let Some(net_type) = &self.network_type {
             println!("{}: {}", "Type".white(), net_type.normal());
         }
-        
+
         if let Some(parent) = &self.parent_handle {
             println!("{}: {}", "Parent Handle".white(), parent.normal());
         }
-        
+
         if let Some(country) = &self.country {
             println!("{}: {}", "Country".white(), country.green());
         }
-        
+
         // Status
         for status in &self.status {
             println!("{}: {}", "Status".white(), status.green());
         }
-        
+
         // Port43
         if let Some(port43) = &self.port43 {
             println!("{}: {}", "Port43".white(), port43.normal());
         }
-        
+
         // Events
         for event in &self.events {
             println!("{}: {}", event.action.white(), event.date.normal());
         }
-        
+
         // Entities - deduplicate and display
         if !self.entities.is_empty() {
             println!();
             let entity_map = collect_entities(&self.entities);
             let mut handles: Vec<_> = entity_map.keys().collect();
             handles.sort();
-            
+
             for handle in handles {
                 if let Some(entity) = entity_map.get(handle) {
                     display_entity(entity, verbose);
@@ -221,7 +344,7 @@ impl RdapDisplay for IpNetwork {
                 }
             }
         }
-        
+
         // Links, Remarks, Notices
         if verbose {
             for link in &self.links {
@@ -239,6 +362,15 @@ impl RdapDisplay for IpNetwork {
 
 impl RdapDisplay for Autnum {
     fn display(&self, verbose: bool) {
+        self.display_with_query("", verbose);
+    }
+}
+
+impl RdapDisplayWithQuery for Autnum {
+    fn display_with_query(&self, _query: &str, verbose: bool) {
+        // Note: Abuse contact is now displayed before "Query from" in main.rs
+        // This method is kept for compatibility but contact display is handled separately
+
         // AS Number
         if let (Some(start), Some(end)) = (self.start_autnum, self.end_autnum) {
             if start == end {
@@ -248,38 +380,38 @@ impl RdapDisplay for Autnum {
                 println!("{}: {}", "End Autnum".white(), format!("AS{}", end).cyan());
             }
         }
-        
+
         if let Some(name) = &self.name {
             println!("{}: {}", "Name".white(), name.cyan());
         }
-        
+
         if let Some(handle) = &self.handle {
             println!("{}: {}", "Handle".white(), handle.normal());
         }
-        
+
         // Object class
         if let Some(class) = &self.object_class_name {
             println!("{}: {}", "Object Class".white(), class.normal());
         }
-        
+
         if let Some(as_type) = &self.as_type {
             println!("{}: {}", "Type".white(), as_type.normal());
         }
-        
+
         if let Some(country) = &self.country {
             println!("{}: {}", "Country".white(), country.green());
         }
-        
+
         // Status
         for status in &self.status {
             println!("{}: {}", "Status".white(), status.green());
         }
-        
+
         // Port43
         if let Some(port43) = &self.port43 {
             println!("{}: {}", "Port43".white(), port43.normal());
         }
-        
+
         // Events
         for event in &self.events {
             let action = match event.action.as_str() {
@@ -289,14 +421,14 @@ impl RdapDisplay for Autnum {
             };
             println!("{}: {}", action.white(), event.date.normal());
         }
-        
+
         // Entities - deduplicate and display
         if !self.entities.is_empty() {
             println!();
             let entity_map = collect_entities(&self.entities);
             let mut handles: Vec<_> = entity_map.keys().collect();
             handles.sort();
-            
+
             for handle in handles {
                 if let Some(entity) = entity_map.get(handle) {
                     display_entity(entity, verbose);
@@ -304,8 +436,8 @@ impl RdapDisplay for Autnum {
                 }
             }
         }
-        
-        // Links, Remarks, Notices  
+
+        // Links, Remarks, Notices
         if verbose {
             for link in &self.links {
                 if let Some(rel) = &link.rel {
@@ -321,7 +453,7 @@ impl RdapDisplay for Autnum {
                 display_notice(notice);
             }
         }
-        
+
         // Conformance
         if verbose && !self.conformance.is_empty() {
             println!("\n{}", "RDAP Conformance:".dimmed());
@@ -627,21 +759,19 @@ fn display_entity(entity: &Entity, verbose: bool) {
     
     // Links (always show self link)
     for link in &entity.links {
-        if let Some(rel) = &link.rel {
-            if rel == "self" {
+        if let Some(rel) = &link.rel
+            && rel == "self" {
                 println!("{}: {}", "Link".dimmed(), link.href.cyan());
             }
-        }
     }
     
     // More details in verbose mode
     if verbose {
         for link in &entity.links {
-            if let Some(rel) = &link.rel {
-                if rel != "self" {
+            if let Some(rel) = &link.rel
+                && rel != "self" {
                     println!("{}: {} ({})", "Link".white(), link.href.cyan(), rel.dimmed());
                 }
-            }
         }
         for remark in &entity.remarks {
             display_notice(remark);

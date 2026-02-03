@@ -61,8 +61,8 @@ impl VCard {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
         
-        if let VCardValue::Structured(parts) = &prop.value {
-            if parts.len() >= 7 {
+        if let VCardValue::Structured(parts) = &prop.value
+            && parts.len() >= 7 {
                 return Some(VCardAddress {
                     label,
                     po_box: parts[0].to_string(),
@@ -74,7 +74,6 @@ impl VCard {
                     country: parts[6].to_string(),
                 });
             }
-        }
         None
     }
     

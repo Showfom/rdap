@@ -25,8 +25,17 @@ A modern, elegant RDAP (Registration Data Access Protocol) client written in Rus
 🚀 **Smart Features**
 - Automatic bootstrap service discovery
 - Query type auto-detection
+- Multi-layer RDAP queries (registry + registrar for domains)
+- Custom TLD overrides for ccTLDs not in IANA bootstrap
+- Abuse contact display for IP/ASN queries
 - Disk caching of bootstrap files
 - Configurable timeouts
+
+⚙️ **Configuration**
+- Built-in defaults for zero-config usage
+- Configurable bootstrap URLs and TLD overrides
+- Support for local override files (*.local.json)
+- `rdap update` command to fetch latest configs from GitHub
 
 ## Installation
 
@@ -52,6 +61,11 @@ cargo install rdap
 ```bash
 # Query a domain
 rdap example.com
+
+# Query a TLD (top-level domain)
+rdap google
+rdap com
+rdap io
 
 # Query an IP address
 rdap 192.0.2.1
@@ -80,6 +94,13 @@ rdap -f json-pretty example.com
 
 # Set custom timeout (in seconds)
 rdap --timeout 60 example.com
+
+# Disable registrar referral following for domain queries
+rdap --no-referral example.com
+
+# Update configuration files from GitHub
+rdap --update
+rdap -u
 ```
 
 ### Output Formats
@@ -117,6 +138,27 @@ Entity Handle: 376
 Role: registrar
 Name: RESERVED-Internet Assigned Numbers Authority
 IANA Registrar ID: 376
+```
+
+### TLD Query
+
+```bash
+$ rdap google
+
+Domain Name: google
+Object Class: domain
+Status: active
+Nameserver: ns-tld1.charlestonroadregistry.com (216.239.32.105, 2001:4860:4802:32::69)
+Nameserver: ns-tld2.charlestonroadregistry.com (216.239.34.105, 2001:4860:4802:34::69)
+...
+Delegation Signed: yes
+Registration: 2014-09-04T00:00:00+00:00
+
+Role: registrant
+Name: Charleston Road Registry Inc.
+Address: 1600 Amphitheatre Parkway
+Mountain View CA 94043
+United States of America (the)
 ```
 
 ### IP Query
@@ -591,6 +633,49 @@ async fn query_handler(
 }
 ```
 
+## Configuration
+
+The RDAP client uses a configuration system with the following priority (highest to lowest):
+
+1. `~/.config/rdap/*.local.json` - User local overrides (never overwritten by updates)
+2. `~/.config/rdap/*.json` - Downloaded configs (updated via `rdap update`)
+3. `/etc/rdap/*.json` - System-wide configs
+4. Built-in defaults (embedded in binary)
+
+### Configuration Files
+
+- **config.json** - Bootstrap URLs for IANA RDAP service discovery
+- **tlds.json** - TLD overrides for ccTLDs not in IANA bootstrap
+- **config.local.json** - Your custom bootstrap config (optional, survives updates)
+- **tlds.local.json** - Your custom TLD overrides (merged on top of tlds.json)
+
+### Updating Configs
+
+```bash
+# Update configs from GitHub
+rdap --update
+rdap -u
+```
+
+This downloads:
+- `config.json` and `tlds.json` from the GitHub repository
+- `tlds.txt` (IANA TLD list) from https://data.iana.org/TLD/tlds-alpha-by-domain.txt
+
+Your `*.local.json` files are preserved.
+
+### Custom TLD Overrides
+
+Create `~/.config/rdap/tlds.local.json` to add your own TLD overrides:
+
+```json
+{
+  "example": "https://rdap.example.com/",
+  "co.example": "https://rdap.co.example.com/"
+}
+```
+
+These will be merged on top of the base `tlds.json` configuration.
+
 ## Architecture
 
 ```
@@ -598,6 +683,7 @@ src/
 ├── lib.rs           # Library entry point
 ├── main.rs          # CLI entry point
 ├── error.rs         # Error types
+├── config.rs        # Configuration management
 ├── models/          # RDAP data models
 │   ├── domain.rs
 │   ├── entity.rs
@@ -610,6 +696,11 @@ src/
 ├── bootstrap.rs     # Bootstrap service discovery
 ├── cache.rs         # Bootstrap cache
 └── display.rs       # Pretty output formatting
+
+config/
+├── config.json      # Default bootstrap URLs
+├── tlds.json        # Default TLD overrides for ccTLDs
+└── tlds.txt         # IANA TLD list for TLD query detection
 ```
 
 ## RFCs Implemented
