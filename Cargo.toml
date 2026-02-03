@@ -5,6 +5,8 @@ edition = "2024"
 authors = ["xTom", "Akaere Networks"]
 description = "A modern RDAP (Registration Data Access Protocol) client"
 license = "MIT"
+homepage = "https://github.com/xtomcom/rdap"
+repository = "https://github.com/xtomcom/rdap"
 
 [dependencies]
 # HTTP client
@@ -50,3 +52,23 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true
+
+# Debian package metadata
+[package.metadata.deb]
+maintainer = "xTom <packages@xtom.com>"
+copyright = "2026, xTom"
+license-file = ["LICENSE", "0"]
+extended-description = "A modern RDAP client for querying domain, IP, and ASN registration data following RFC 7480-7484."
+section = "net"
+priority = "optional"
+assets = [
+    ["target/release/rdap", "usr/bin/", "755"],
+]
+
+# RPM package metadata
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/rdap", dest = "/usr/bin/rdap", mode = "0755" },
+]
+
+[package.metadata.generate-rpm.requires]
