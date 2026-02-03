@@ -1,6 +1,6 @@
 //! Error response model
 
-use super::*;
+use super::Notice;
 use serde::{Deserialize, Serialize};
 
 /// RDAP error response

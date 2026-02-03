@@ -29,7 +29,7 @@ impl VCard {
             }
         }
 
-        Some(VCard { properties })
+        Some(Self { properties })
     }
 
     /// Get formatted name
@@ -61,20 +61,20 @@ impl VCard {
             .parameters
             .get("label")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
 
         if let VCardValue::Structured(parts) = &prop.value
             && parts.len() >= 7
         {
             return Some(VCardAddress {
                 label,
-                po_box: parts[0].to_string(),
-                extended: parts[1].to_string(),
-                street: parts[2].to_string(),
-                locality: parts[3].to_string(),
-                region: parts[4].to_string(),
-                postal_code: parts[5].to_string(),
-                country: parts[6].to_string(),
+                po_box: parts[0].clone(),
+                extended: parts[1].clone(),
+                street: parts[2].clone(),
+                locality: parts[3].clone(),
+                region: parts[4].clone(),
+                postal_code: parts[5].clone(),
+                country: parts[6].clone(),
             });
         }
         None
@@ -113,7 +113,7 @@ impl VCardProperty {
         let value_type = arr[2].as_str()?.to_string();
         let value = VCardValue::from_json(&arr[3]);
 
-        Some(VCardProperty {
+        Some(Self {
             name,
             parameters,
             value_type,
@@ -133,25 +133,25 @@ pub enum VCardValue {
 impl VCardValue {
     fn from_json(val: &Value) -> Self {
         match val {
-            Value::String(s) => VCardValue::Text(s.clone()),
+            Value::String(s) => Self::Text(s.clone()),
             Value::Array(arr) => {
                 let items: Vec<String> = arr
                     .iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .filter_map(|v| v.as_str().map(std::string::ToString::to_string))
                     .collect();
                 if items.len() == arr.len() {
-                    VCardValue::Structured(items)
+                    Self::Structured(items)
                 } else {
-                    VCardValue::Array(vec![])
+                    Self::Array(vec![])
                 }
             }
-            _ => VCardValue::Text(val.to_string()),
+            _ => Self::Text(val.to_string()),
         }
     }
 
     fn as_str(&self) -> Option<&str> {
         match self {
-            VCardValue::Text(s) => Some(s),
+            Self::Text(s) => Some(s),
             _ => None,
         }
     }
@@ -177,7 +177,7 @@ impl<'de> Deserialize<'de> for VCard {
         D: serde::Deserializer<'de>,
     {
         let arr = Vec::<Value>::deserialize(deserializer)?;
-        VCard::from_array(&arr).ok_or_else(|| serde::de::Error::custom("Invalid vCard format"))
+        Self::from_array(&arr).ok_or_else(|| serde::de::Error::custom("Invalid vCard format"))
     }
 }
 

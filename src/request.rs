@@ -41,22 +41,22 @@ pub enum QueryType {
 impl fmt::Display for QueryType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            QueryType::Domain => "domain",
-            QueryType::Tld => "tld",
-            QueryType::Ip => "ip",
-            QueryType::Autnum => "autnum",
-            QueryType::Entity => "entity",
-            QueryType::Nameserver => "nameserver",
-            QueryType::Help => "help",
-            QueryType::DomainSearch => "domain-search",
-            QueryType::DomainSearchByNameserver => "domain-search-by-nameserver",
-            QueryType::DomainSearchByNameserverIp => "domain-search-by-nameserver-ip",
-            QueryType::NameserverSearch => "nameserver-search",
-            QueryType::NameserverSearchByIp => "nameserver-search-by-ip",
-            QueryType::EntitySearch => "entity-search",
-            QueryType::EntitySearchByHandle => "entity-search-by-handle",
+            Self::Domain => "domain",
+            Self::Tld => "tld",
+            Self::Ip => "ip",
+            Self::Autnum => "autnum",
+            Self::Entity => "entity",
+            Self::Nameserver => "nameserver",
+            Self::Help => "help",
+            Self::DomainSearch => "domain-search",
+            Self::DomainSearchByNameserver => "domain-search-by-nameserver",
+            Self::DomainSearchByNameserverIp => "domain-search-by-nameserver-ip",
+            Self::NameserverSearch => "nameserver-search",
+            Self::NameserverSearchByIp => "nameserver-search-by-ip",
+            Self::EntitySearch => "entity-search",
+            Self::EntitySearchByHandle => "entity-search-by-handle",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -86,9 +86,10 @@ impl RdapRequest {
 
     /// Build the full RDAP URL
     pub fn build_url(&self, base_url: &Url) -> Result<Url> {
+        let encoded_query = urlencoding::encode(&self.query);
         let path = match self.query_type {
             QueryType::Domain | QueryType::Tld => {
-                format!("domain/{}", urlencoding::encode(&self.query))
+                format!("domain/{encoded_query}")
             }
             QueryType::Ip => format!("ip/{}", self.query),
             QueryType::Autnum => {
@@ -98,45 +99,31 @@ impl RdapRequest {
                 } else {
                     &self.query
                 };
-                format!("autnum/{}", asn)
+                format!("autnum/{asn}")
             }
-            QueryType::Entity => format!("entity/{}", urlencoding::encode(&self.query)),
-            QueryType::Nameserver => format!("nameserver/{}", urlencoding::encode(&self.query)),
-            QueryType::Help => "help".to_string(),
+            QueryType::Entity => format!("entity/{encoded_query}"),
+            QueryType::Nameserver => format!("nameserver/{encoded_query}"),
+            QueryType::Help => "help".to_owned(),
             QueryType::DomainSearch => {
-                return Ok(base_url.join(&format!(
-                    "domains?name={}",
-                    urlencoding::encode(&self.query)
-                ))?);
+                return Ok(base_url.join(&format!("domains?name={encoded_query}"))?);
             }
             QueryType::DomainSearchByNameserver => {
-                return Ok(base_url.join(&format!(
-                    "domains?nsLdhName={}",
-                    urlencoding::encode(&self.query)
-                ))?);
+                return Ok(base_url.join(&format!("domains?nsLdhName={encoded_query}"))?);
             }
             QueryType::DomainSearchByNameserverIp => {
                 return Ok(base_url.join(&format!("domains?nsIp={}", self.query))?);
             }
             QueryType::NameserverSearch => {
-                return Ok(base_url.join(&format!(
-                    "nameservers?name={}",
-                    urlencoding::encode(&self.query)
-                ))?);
+                return Ok(base_url.join(&format!("nameservers?name={encoded_query}"))?);
             }
             QueryType::NameserverSearchByIp => {
                 return Ok(base_url.join(&format!("nameservers?ip={}", self.query))?);
             }
             QueryType::EntitySearch => {
-                return Ok(
-                    base_url.join(&format!("entities?fn={}", urlencoding::encode(&self.query)))?
-                );
+                return Ok(base_url.join(&format!("entities?fn={encoded_query}"))?);
             }
             QueryType::EntitySearchByHandle => {
-                return Ok(base_url.join(&format!(
-                    "entities?handle={}",
-                    urlencoding::encode(&self.query)
-                ))?);
+                return Ok(base_url.join(&format!("entities?handle={encoded_query}"))?);
             }
         };
 
@@ -162,10 +149,10 @@ impl RdapRequest {
         // Check for pure number (AS number without AS prefix)
         // But not if it looks like an IP (e.g., large numbers that could be IPs)
         if query.chars().all(|c| c.is_ascii_digit()) {
-            // Numbers > 4294967295 can't be AS numbers or IPs
+            // Numbers > 4_294_967_295 can't be AS numbers or IPs
             if let Ok(n) = query.parse::<u64>()
-                && n <= 4294967295
-                && n <= 4294967294
+                && n <= 4_294_967_295
+                && n <= 4_294_967_294
             {
                 // Could be AS number or IP in numeric form
                 // Treat as AS number if it's a reasonable AS number range

@@ -45,20 +45,20 @@ impl BootstrapClient {
             QueryType::Tld => {
                 // TLD queries always go to IANA RDAP
                 let url = Url::parse(config::IANA_RDAP_URL)
-                    .map_err(|e| RdapError::Bootstrap(format!("Invalid IANA RDAP URL: {}", e)))?;
+                    .map_err(|e| RdapError::Bootstrap(format!("Invalid IANA RDAP URL: {e}")))?;
                 Ok(vec![url])
             }
             QueryType::Domain => {
                 // Priority: tlds.json first, then bootstrap
                 if let Some(url) = config::lookup_tld_override(&self.tld_overrides, &request.query)
                 {
-                    log::debug!("Found TLD override for {}: {}", request.query, url);
+                    log::debug!("Found TLD override for {}: {url}", request.query);
                     return Ok(vec![url]);
                 }
 
                 // Fall back to IANA bootstrap
                 let registry = self.fetch_registry(&self.config.bootstrap.dns).await?;
-                self.match_domain(&registry, &request.query)
+                Ok(self.match_domain(&registry, &request.query))
             }
             QueryType::Ip => {
                 let bootstrap_url = if request.query.contains(':') {
@@ -74,24 +74,24 @@ impl BootstrapClient {
                 self.match_asn(&registry, &request.query)
             }
             QueryType::Entity => Err(RdapError::Bootstrap(
-                "Entity queries require explicit server (-s/--server)".to_string(),
+                "Entity queries require explicit server (-s/--server)".to_owned(),
             )),
             _ => Err(RdapError::Bootstrap(
-                "This query type requires explicit server (-s/--server)".to_string(),
+                "This query type requires explicit server (-s/--server)".to_owned(),
             )),
         }
     }
 
     /// Fetch bootstrap registry file from URL
     async fn fetch_registry(&self, url: &str) -> Result<BootstrapRegistry> {
-        log::debug!("Fetching bootstrap registry: {}", url);
+        log::debug!("Fetching bootstrap registry: {url}");
 
         let response = self.http_client.get(url).send().await?;
 
         if !response.status().is_success() {
+            let status = response.status();
             return Err(RdapError::Bootstrap(format!(
-                "Failed to fetch registry: HTTP {}",
-                response.status()
+                "Failed to fetch registry: HTTP {status}"
             )));
         }
 
@@ -100,7 +100,7 @@ impl BootstrapClient {
     }
 
     /// Match domain name
-    fn match_domain(&self, registry: &BootstrapRegistry, domain: &str) -> Result<Vec<Url>> {
+    fn match_domain(&self, registry: &BootstrapRegistry, domain: &str) -> Vec<Url> {
         let domain = domain.trim_end_matches('.').to_lowercase();
 
         // Build lookup map
@@ -111,7 +111,7 @@ impl BootstrapClient {
             {
                 let url_strings: Vec<String> = urls
                     .iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .filter_map(|v| v.as_str().map(std::borrow::ToOwned::to_owned))
                     .collect();
 
                 for entry in entries {
@@ -128,26 +128,26 @@ impl BootstrapClient {
         while !parts.is_empty() {
             let test_domain = parts.join(".");
             if let Some(urls) = map.get(&test_domain) {
-                return Ok(urls.iter().filter_map(|s| Url::parse(s).ok()).collect());
+                return urls.iter().filter_map(|s| Url::parse(s).ok()).collect();
             }
             parts.remove(0);
         }
 
-        Ok(vec![])
+        vec![]
     }
 
     /// Match IP address (supports standard IPs, shorthand IPs, and CIDR)
     fn match_ip(&self, registry: &BootstrapRegistry, ip_query: &str) -> Result<Vec<Url>> {
         // Normalize the IP (handles shorthand like 1.1 -> 1.0.0.1)
         let normalized = ip::normalize_ip(ip_query)
-            .ok_or_else(|| RdapError::InvalidQuery(format!("Invalid IP address: {}", ip_query)))?;
+            .ok_or_else(|| RdapError::InvalidQuery(format!("Invalid IP address: {ip_query}")))?;
 
         // Extract the IP part (for CIDR queries like 8.8.8.0/24, we match using the network address)
         let ip_str = ip::extract_ip_from_cidr(&normalized);
 
         let addr: IpAddr = ip_str
             .parse()
-            .map_err(|_| RdapError::InvalidQuery(format!("Invalid IP address: {}", ip_str)))?;
+            .map_err(|_| RdapError::InvalidQuery(format!("Invalid IP address: {ip_str}")))?;
 
         for service in &registry.services {
             if service.len() >= 2
@@ -155,7 +155,7 @@ impl BootstrapClient {
             {
                 for entry in entries {
                     if let Some(cidr) = entry.as_str()
-                        && self.ip_in_network(&addr, cidr)
+                        && Self::ip_in_network(&addr, cidr)
                     {
                         let url_list: Vec<Url> = urls
                             .iter()
@@ -171,7 +171,7 @@ impl BootstrapClient {
     }
 
     /// Check if IP is in CIDR network using ipnet
-    fn ip_in_network(&self, addr: &IpAddr, cidr: &str) -> bool {
+    fn ip_in_network(addr: &IpAddr, cidr: &str) -> bool {
         if let Ok(network) = cidr.parse::<IpNet>() {
             return network.contains(addr);
         }
@@ -188,7 +188,7 @@ impl BootstrapClient {
         };
         let asn: u32 = asn_str
             .parse()
-            .map_err(|_| RdapError::InvalidQuery(format!("Invalid AS number: {}", asn_str)))?;
+            .map_err(|_| RdapError::InvalidQuery(format!("Invalid AS number: {asn_str}")))?;
 
         for service in &registry.services {
             if service.len() >= 2
@@ -196,7 +196,7 @@ impl BootstrapClient {
             {
                 for entry in entries {
                     if let Some(range_str) = entry.as_str()
-                        && self.asn_in_range(asn, range_str)
+                        && Self::asn_in_range(asn, range_str)
                     {
                         let url_list: Vec<Url> = urls
                             .iter()
@@ -212,7 +212,7 @@ impl BootstrapClient {
     }
 
     /// Check if AS number is in range
-    fn asn_in_range(&self, asn: u32, range_str: &str) -> bool {
+    fn asn_in_range(asn: u32, range_str: &str) -> bool {
         if let Some(dash_pos) = range_str.find('-') {
             // Range: "1000-2000"
             if let (Ok(start), Ok(end)) = (

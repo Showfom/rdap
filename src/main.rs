@@ -66,20 +66,20 @@ enum QueryTypeArg {
 impl From<QueryTypeArg> for QueryType {
     fn from(arg: QueryTypeArg) -> Self {
         match arg {
-            QueryTypeArg::Domain => QueryType::Domain,
-            QueryTypeArg::Tld => QueryType::Tld,
-            QueryTypeArg::Ip => QueryType::Ip,
-            QueryTypeArg::Autnum => QueryType::Autnum,
-            QueryTypeArg::Entity => QueryType::Entity,
-            QueryTypeArg::Nameserver => QueryType::Nameserver,
-            QueryTypeArg::Help => QueryType::Help,
-            QueryTypeArg::DomainSearch => QueryType::DomainSearch,
-            QueryTypeArg::DomainSearchByNameserver => QueryType::DomainSearchByNameserver,
-            QueryTypeArg::DomainSearchByNameserverIp => QueryType::DomainSearchByNameserverIp,
-            QueryTypeArg::NameserverSearch => QueryType::NameserverSearch,
-            QueryTypeArg::NameserverSearchByIp => QueryType::NameserverSearchByIp,
-            QueryTypeArg::EntitySearch => QueryType::EntitySearch,
-            QueryTypeArg::EntitySearchByHandle => QueryType::EntitySearchByHandle,
+            QueryTypeArg::Domain => Self::Domain,
+            QueryTypeArg::Tld => Self::Tld,
+            QueryTypeArg::Ip => Self::Ip,
+            QueryTypeArg::Autnum => Self::Autnum,
+            QueryTypeArg::Entity => Self::Entity,
+            QueryTypeArg::Nameserver => Self::Nameserver,
+            QueryTypeArg::Help => Self::Help,
+            QueryTypeArg::DomainSearch => Self::DomainSearch,
+            QueryTypeArg::DomainSearchByNameserver => Self::DomainSearchByNameserver,
+            QueryTypeArg::DomainSearchByNameserverIp => Self::DomainSearchByNameserverIp,
+            QueryTypeArg::NameserverSearch => Self::NameserverSearch,
+            QueryTypeArg::NameserverSearchByIp => Self::NameserverSearchByIp,
+            QueryTypeArg::EntitySearch => Self::EntitySearch,
+            QueryTypeArg::EntitySearchByHandle => Self::EntitySearchByHandle,
         }
     }
 }
@@ -137,7 +137,7 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
         eprintln!(
             "{} Type:  {}",
             "→".bright_blue(),
-            format!("{}", query_type).bright_yellow()
+            format!("{query_type}").bright_yellow()
         );
     }
 
@@ -216,7 +216,7 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                         let display_query = if query.to_uppercase().starts_with("AS") {
                             query.to_uppercase()
                         } else {
-                            format!("AS{}", query)
+                            format!("AS{query}")
                         };
                         if let rdap::RdapObject::Autnum(asn) = &query_result.registry {
                             rdap::display::display_asn_abuse_contact(asn, &display_query);
@@ -240,7 +240,7 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                 .as_ref()
                 .unwrap_or(&query_result.registry);
             let json = serde_json::to_string(result)?;
-            println!("{}", json);
+            println!("{json}");
         }
         OutputFormat::JsonPretty => {
             let result = query_result
@@ -248,7 +248,7 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                 .as_ref()
                 .unwrap_or(&query_result.registry);
             let json = serde_json::to_string_pretty(result)?;
-            println!("{}", json);
+            println!("{json}");
         }
     }
 

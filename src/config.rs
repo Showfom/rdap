@@ -78,9 +78,7 @@ impl Default for CacheConfig {
 
 /// Get the user config directory path (~/.config/rdap/)
 pub fn user_config_dir() -> Result<PathBuf> {
-    let dir = std::env::var("HOME")
-        .map(|h| PathBuf::from(h).join(".config/rdap"))
-        .unwrap_or_else(|_| PathBuf::from(".config/rdap"));
+    let dir = std::env::var("HOME").map_or_else(|_| PathBuf::from(".config/rdap"), |h| PathBuf::from(h).join(".config/rdap"));
     Ok(dir)
 }
 
@@ -90,7 +88,7 @@ pub fn system_config_dir() -> PathBuf {
 }
 
 impl Config {
-    /// Get the config directory path (alias for user_config_dir)
+    /// Get the config directory path (alias for `user_config_dir`)
     pub fn config_dir() -> Result<PathBuf> {
         user_config_dir()
     }
@@ -132,7 +130,7 @@ impl Config {
 
         // Fall back to built-in default
         log::debug!("Using built-in config");
-        let config: Config = serde_json::from_str(BUILTIN_CONFIG)?;
+        let config: Self = serde_json::from_str(BUILTIN_CONFIG)?;
         Ok(config)
     }
 
@@ -265,11 +263,11 @@ pub async fn update_configs() -> Result<UpdateResult> {
                         result.config_error = Some("Invalid config.json format".to_string());
                     }
                 }
-                Err(e) => result.config_error = Some(format!("Failed to read response: {}", e)),
+                Err(e) => result.config_error = Some(format!("Failed to read response: {e}")),
             }
         }
         Ok(response) => result.config_error = Some(format!("HTTP {}", response.status())),
-        Err(e) => result.config_error = Some(format!("Request failed: {}", e)),
+        Err(e) => result.config_error = Some(format!("Request failed: {e}")),
     }
 
     // Update tlds.json
@@ -287,11 +285,11 @@ pub async fn update_configs() -> Result<UpdateResult> {
                         result.tlds_error = Some("Invalid tlds.json format".to_string());
                     }
                 }
-                Err(e) => result.tlds_error = Some(format!("Failed to read response: {}", e)),
+                Err(e) => result.tlds_error = Some(format!("Failed to read response: {e}")),
             }
         }
         Ok(response) => result.tlds_error = Some(format!("HTTP {}", response.status())),
-        Err(e) => result.tlds_error = Some(format!("Request failed: {}", e)),
+        Err(e) => result.tlds_error = Some(format!("Request failed: {e}")),
     }
 
     // Update tlds.txt (IANA TLD list)
@@ -314,11 +312,11 @@ pub async fn update_configs() -> Result<UpdateResult> {
                         result.tld_list_error = Some("Invalid tlds.txt format".to_string());
                     }
                 }
-                Err(e) => result.tld_list_error = Some(format!("Failed to read response: {}", e)),
+                Err(e) => result.tld_list_error = Some(format!("Failed to read response: {e}")),
             }
         }
         Ok(response) => result.tld_list_error = Some(format!("HTTP {}", response.status())),
-        Err(e) => result.tld_list_error = Some(format!("Request failed: {}", e)),
+        Err(e) => result.tld_list_error = Some(format!("Request failed: {e}")),
     }
 
     Ok(result)

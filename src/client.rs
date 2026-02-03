@@ -48,13 +48,13 @@ impl RdapClient {
     }
 
     /// Set timeout
-    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+    pub const fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
     }
 
     /// Enable or disable following registrar referrals (default: enabled)
-    pub fn with_follow_referral(mut self, follow: bool) -> Self {
+    pub const fn with_follow_referral(mut self, follow: bool) -> Self {
         self.follow_referral = follow;
         self
     }
@@ -85,7 +85,7 @@ impl RdapClient {
         for base_url in &urls {
             let url = request.build_url(base_url)?;
 
-            log::debug!("Querying RDAP server: {}", url);
+            log::debug!("Querying RDAP server: {url}");
 
             match self.fetch_rdap(&url).await {
                 Ok(obj) => {
@@ -95,7 +95,21 @@ impl RdapClient {
                         && let RdapObject::Domain(ref domain) = obj
                         && let Some(registrar_rdap_url) = self.extract_registrar_rdap_url(domain)
                     {
-                        log::debug!("Following registrar referral: {}", registrar_rdap_url);
+                        // Skip if referral points to the same server (same host)
+                        if Self::is_same_server(&url, &registrar_rdap_url) {
+                            log::debug!(
+                                "Skipping referral: same server as registry ({})",
+                                registrar_rdap_url.host_str().unwrap_or("unknown")
+                            );
+                            return Ok(RdapQueryResult {
+                                registry: obj,
+                                registry_url: url,
+                                registrar: None,
+                                registrar_url: None,
+                            });
+                        }
+
+                        log::debug!("Following registrar referral: {registrar_rdap_url}");
                         match self.fetch_rdap(&registrar_rdap_url).await {
                             Ok(registrar_obj) => {
                                 return Ok(RdapQueryResult {
@@ -106,7 +120,7 @@ impl RdapClient {
                                 });
                             }
                             Err(e) => {
-                                log::warn!("Failed to fetch registrar data: {}", e);
+                                log::warn!("Failed to fetch registrar data: {e}");
                                 // Continue with registry-only result
                             }
                         }
@@ -120,13 +134,18 @@ impl RdapClient {
                 }
                 Err(RdapError::NotFound) => return Err(RdapError::NotFound),
                 Err(e) => {
-                    log::warn!("Server {} failed: {}", url, e);
+                    log::warn!("Server {url} failed: {e}");
                     last_error = Some(e);
                 }
             }
         }
 
         Err(last_error.unwrap_or(RdapError::NoWorkingServers))
+    }
+
+    /// Check if two URLs point to the same server (same host)
+    fn is_same_server(url1: &Url, url2: &Url) -> bool {
+        url1.host() == url2.host()
     }
 
     /// Extract registrar RDAP URL from domain response
@@ -200,7 +219,7 @@ impl RdapClient {
                     description: err_obj.description,
                 })
             } else {
-                Err(RdapError::Other(format!("HTTP error: {}", status)))
+                Err(RdapError::Other(format!("HTTP error: {status}")))
             }
         }
     }

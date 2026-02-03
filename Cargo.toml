@@ -1,12 +1,31 @@
 [package]
 name = "rdap"
-version = "0.2.1"
+version = "1.0.0"
 edition = "2024"
 authors = ["xTom", "Akaere Networks"]
 description = "A modern RDAP (Registration Data Access Protocol) client"
 license = "MIT"
 homepage = "https://github.com/xtomcom/rdap"
 repository = "https://github.com/xtomcom/rdap"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+# Allow these common patterns
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+redundant_pub_crate = "allow"
+too_many_lines = "allow"
+struct_excessive_bools = "allow"
+unused_self = "allow"
+cast_possible_truncation = "allow"
+items_after_statements = "allow"
+if_not_else = "allow"
+branches_sharing_code = "allow"
+assigning_clones = "allow"
 
 [dependencies]
 # HTTP client

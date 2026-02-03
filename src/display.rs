@@ -1,7 +1,7 @@
 //! Beautiful colored output for RDAP objects
 
-use crate::models::*;
-use colored::*;
+use crate::models::{RdapObject, Entity, IpNetwork, Autnum, Domain, Nameserver, ErrorResponse, DomainSearchResults, EntitySearchResults, NameserverSearchResults, HelpResponse, Notice};
+use colored::Colorize;
 use std::collections::HashMap;
 
 /// Display trait for RDAP objects
@@ -17,16 +17,16 @@ pub trait RdapDisplayWithQuery {
 impl RdapDisplay for RdapObject {
     fn display(&self, verbose: bool) {
         match self {
-            RdapObject::Domain(d) => d.display(verbose),
-            RdapObject::Entity(e) => e.display(verbose),
-            RdapObject::Nameserver(ns) => ns.display(verbose),
-            RdapObject::Autnum(a) => a.display(verbose),
-            RdapObject::IpNetwork(ip) => ip.display(verbose),
-            RdapObject::Error(err) => err.display(verbose),
-            RdapObject::DomainSearch(ds) => ds.display(verbose),
-            RdapObject::EntitySearch(es) => es.display(verbose),
-            RdapObject::NameserverSearch(ns) => ns.display(verbose),
-            RdapObject::Help(h) => h.display(verbose),
+            Self::Domain(d) => d.display(verbose),
+            Self::Entity(e) => e.display(verbose),
+            Self::Nameserver(ns) => ns.display(verbose),
+            Self::Autnum(a) => a.display(verbose),
+            Self::IpNetwork(ip) => ip.display(verbose),
+            Self::Error(err) => err.display(verbose),
+            Self::DomainSearch(ds) => ds.display(verbose),
+            Self::EntitySearch(es) => es.display(verbose),
+            Self::NameserverSearch(ns) => ns.display(verbose),
+            Self::Help(h) => h.display(verbose),
         }
     }
 }
@@ -34,9 +34,9 @@ impl RdapDisplay for RdapObject {
 impl RdapDisplayWithQuery for RdapObject {
     fn display_with_query(&self, query: &str, verbose: bool) {
         match self {
-            RdapObject::Domain(d) => d.display_with_query(query, verbose),
-            RdapObject::IpNetwork(ip) => ip.display_with_query(query, verbose),
-            RdapObject::Autnum(a) => a.display_with_query(query, verbose),
+            Self::Domain(d) => d.display_with_query(query, verbose),
+            Self::IpNetwork(ip) => ip.display_with_query(query, verbose),
+            Self::Autnum(a) => a.display_with_query(query, verbose),
             _ => self.display(verbose),
         }
     }
@@ -356,7 +356,7 @@ impl RdapDisplayWithQuery for IpNetwork {
             println!(
                 "{}: {}",
                 "IP Version".white(),
-                format!("v{}", ip_ver).normal()
+                format!("v{ip_ver}").normal()
             );
         }
 
@@ -438,15 +438,15 @@ impl RdapDisplayWithQuery for Autnum {
                 println!(
                     "{}: {}",
                     "AS Number".white(),
-                    format!("AS{}", start).cyan().bold()
+                    format!("AS{start}").cyan().bold()
                 );
             } else {
                 println!(
                     "{}: {}",
                     "Start Autnum".white(),
-                    format!("AS{}", start).cyan()
+                    format!("AS{start}").cyan()
                 );
-                println!("{}: {}", "End Autnum".white(), format!("AS{}", end).cyan());
+                println!("{}: {}", "End Autnum".white(), format!("AS{end}").cyan());
             }
         }
 
@@ -541,7 +541,10 @@ impl RdapDisplayWithQuery for Autnum {
 impl RdapDisplay for Entity {
     fn display(&self, verbose: bool) {
         // If this entity has nested entities, collect and deduplicate them
-        if !self.entities.is_empty() {
+        if self.entities.is_empty() {
+            // No nested entities, just display this one
+            display_entity(self, verbose);
+        } else {
             // Display main entity first
             display_entity(self, verbose);
             println!();
@@ -557,9 +560,6 @@ impl RdapDisplay for Entity {
                     println!();
                 }
             }
-        } else {
-            // No nested entities, just display this one
-            display_entity(self, verbose);
         }
 
         // Display notices (for top-level entity response)

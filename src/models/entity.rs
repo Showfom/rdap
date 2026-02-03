@@ -1,6 +1,6 @@
 //! Entity (person/organization) model
 
-use super::*;
+use super::{Notice, VCard, PublicId, Remark, Link, Event, Status, IpNetwork, Autnum};
 use serde::{Deserialize, Serialize};
 
 /// Entity representing a person or organization
@@ -28,7 +28,7 @@ pub struct Entity {
     pub public_ids: Vec<PublicId>,
 
     #[serde(default)]
-    pub entities: Vec<Entity>,
+    pub entities: Vec<Self>,
 
     #[serde(default)]
     pub remarks: Vec<Remark>,

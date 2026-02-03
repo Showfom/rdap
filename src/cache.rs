@@ -14,9 +14,7 @@ pub struct Cache {
 impl Cache {
     /// Create a new cache (~/.cache/rdap/ on all platforms)
     pub fn new() -> Result<Self> {
-        let cache_dir = std::env::var("HOME")
-            .map(|h| PathBuf::from(h).join(".cache/rdap"))
-            .unwrap_or_else(|_| PathBuf::from(".cache/rdap"));
+        let cache_dir = std::env::var("HOME").map_or_else(|_| PathBuf::from(".cache/rdap"), |h| PathBuf::from(h).join(".cache/rdap"));
 
         fs::create_dir_all(&cache_dir)?;
 
@@ -27,7 +25,7 @@ impl Cache {
     }
 
     /// Set cache TTL
-    pub fn with_ttl(mut self, ttl: Duration) -> Self {
+    pub const fn with_ttl(mut self, ttl: Duration) -> Self {
         self.ttl = ttl;
         self
     }
@@ -46,7 +44,7 @@ impl Cache {
             && let Ok(elapsed) = SystemTime::now().duration_since(modified)
             && elapsed > self.ttl
         {
-            log::debug!("Cache expired for {}", key);
+            log::debug!("Cache expired for {key}");
             let _ = fs::remove_file(&path);
             return None;
         }

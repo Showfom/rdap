@@ -6,7 +6,7 @@ use std::net::IpAddr;
 ///
 /// Supports:
 /// - Standard IPv4: "192.168.1.1"
-/// - Standard IPv6: "2001:db8::1"
+/// - Standard IPv6: "`2001:db8::1`"
 /// - Shorthand IPv4: "1.1" -> "1.0.0.1", "1.2.3" -> "1.2.0.3"
 /// - CIDR notation: "8.8.8.0/24" (returns as-is for CIDR queries)
 pub fn normalize_ip(input: &str) -> Option<String> {
@@ -20,7 +20,7 @@ pub fn normalize_ip(input: &str) -> Option<String> {
             if prefix_part.parse::<u8>().is_ok() {
                 // Try to normalize the IP part
                 if let Some(normalized_ip) = normalize_ip(ip_part) {
-                    return Some(format!("{}/{}", normalized_ip, prefix_part));
+                    return Some(format!("{normalized_ip}/{prefix_part}"));
                 }
             }
         }
@@ -43,7 +43,7 @@ pub fn normalize_ip(input: &str) -> Option<String> {
     for part in &parts {
         match part.parse::<u64>() {
             Ok(n) if n <= 255 => nums.push(n as u8),
-            Ok(n) if parts.len() == 1 && n <= u32::MAX as u64 => {
+            Ok(n) if parts.len() == 1 && u32::try_from(n).is_ok() => {
                 // Single large number - convert to IP
                 // e.g., 16843009 -> 1.1.1.1
                 let n = n as u32;

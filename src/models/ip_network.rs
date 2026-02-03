@@ -1,6 +1,6 @@
 //! IP Network model
 
-use super::*;
+use super::{Notice, Status, Entity, Remark, Link, Event};
 use serde::{Deserialize, Serialize};
 
 /// IP Network information
