@@ -30,7 +30,7 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -50,7 +50,7 @@ jobs:
           chmod +x ${{ env.APP_NAME }}-${VERSION}-linux-${{ matrix.arch }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-${{ matrix.arch }}
           path: ${{ env.APP_NAME }}-*-linux-${{ matrix.arch }}
@@ -78,7 +78,7 @@ jobs:
             target: riscv64gc-unknown-linux-gnu
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -99,7 +99,7 @@ jobs:
           chmod +x ${{ env.APP_NAME }}-${VERSION}-linux-${{ matrix.arch }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-${{ matrix.arch }}
           path: ${{ env.APP_NAME }}-*-linux-${{ matrix.arch }}
@@ -112,13 +112,13 @@ jobs:
         include:
           - arch: x86_64
             target: x86_64-apple-darwin
-            runner: macos-13
+            runner: macos-15-intel
           - arch: aarch64
             target: aarch64-apple-darwin
-            runner: macos-14
+            runner: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -138,7 +138,7 @@ jobs:
           chmod +x ${{ env.APP_NAME }}-${VERSION}-macos-${{ matrix.arch }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: macos-${{ matrix.arch }}
           path: ${{ env.APP_NAME }}-*-macos-${{ matrix.arch }}
@@ -157,7 +157,7 @@ jobs:
             runner: windows-11-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -177,7 +177,7 @@ jobs:
           Copy-Item "target/${{ matrix.target }}/release/${{ env.APP_NAME }}.exe" "${{ env.APP_NAME }}-${VERSION}-windows-${{ matrix.arch }}.exe"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-${{ matrix.arch }}
           path: ${{ env.APP_NAME }}-*-windows-${{ matrix.arch }}.exe
@@ -190,7 +190,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
