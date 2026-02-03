@@ -2,6 +2,8 @@
 
 A modern, elegant RDAP (Registration Data Access Protocol) client written in Rust with beautiful colored output.
 
+Forked from [Akaere-NetWorks/rdap](https://github.com/Akaere-NetWorks/rdap), add more features and fix bugs.
+
 ## Features
 
 ✨ **Modern & Fast**
@@ -35,14 +37,14 @@ A modern, elegant RDAP (Registration Data Access Protocol) client written in Rus
 - Built-in defaults for zero-config usage
 - Configurable bootstrap URLs and TLD overrides
 - Support for local override files (*.local.json)
-- `rdap update` command to fetch latest configs from GitHub
+- `rdap --update` command to fetch latest configs from GitHub
 
 ## Installation
 
 ### From Source
 
 ```bash
-git clone https://github.com/Akaere-NetWorks/rdap.git
+git clone https://github.com/xtomcom/rdap.git
 cd rdap
 cargo build --release
 sudo cp target/release/rdap /usr/local/bin/
@@ -168,7 +170,6 @@ Mountain View CA 94043
 United States of America (the)
 ```
 
-<<<<<<< HEAD
 ### IP Query (with CIDR support)
 
 ```bash
@@ -185,9 +186,7 @@ IP Version: v4
 Name: GOGL
 ...
 ```
-=======
 ### IP Query
->>>>>>> a367f2a4778627b8efe8d658b31c5f732bdf77da
 
 ```bash
 $ rdap 8.8.8.8
@@ -300,7 +299,7 @@ Add this to your `Cargo.toml`:
 ```toml
 [dependencies]
 rdap = { git = "https://github.com/Akaere-NetWorks/rdap.git" }
-tokio = { version = "1.35", features = ["full"] }
+tokio = { version = "1.49", features = ["full"] }
 ```
 
 Or use a specific version/branch:
@@ -308,15 +307,15 @@ Or use a specific version/branch:
 ```toml
 [dependencies]
 # Use main branch
-rdap = { git = "https://github.com/Akaere-NetWorks/rdap.git", branch = "main" }
+rdap = { git = "https://github.com/xtomcom/rdap.git", branch = "main" }
 
 # Or use a specific tag (when available)
-# rdap = { git = "https://github.com/Akaere-NetWorks/rdap.git", tag = "v0.1.0" }
+# rdap = { git = "https://github.com/xtomcom/rdap.git", tag = "v0.1.0" }
 
 # Or use a specific commit
-# rdap = { git = "https://github.com/Akaere-NetWorks/rdap.git", rev = "abc123" }
+# rdap = { git = "https://github.com/xtomcom/rdap.git", rev = "abc123" }
 
-tokio = { version = "1.35", features = ["full"] }
+tokio = { version = "1.49", features = ["full"] }
 ```
 
 ### Basic Query
@@ -685,7 +684,7 @@ rdap -u
 
 This downloads:
 - `config.json` and `tlds.json` from the GitHub repository
-- `tlds.txt` (IANA TLD list) from https://data.iana.org/TLD/tlds-alpha-by-domain.txt
+- `tlds.txt` (IANA TLD list) from `https://data.iana.org/TLD/tlds-alpha-by-domain.txt`
 
 Your `*.local.json` files are preserved.
 
@@ -760,10 +759,11 @@ MIT License - see LICENSE file for details
 
 ## Author
 
-Akaere Networks
+xTom & Akaere Networks
 
 ## Links
 
+- Original RDAP version: https://github.com/Akaere-NetWorks/rdap
 - Original Go version: https://github.com/openrdap/rdap
 - IANA RDAP Bootstrap: https://data.iana.org/rdap/
 - RDAP Working Group: https://datatracker.ietf.org/wg/weirds/

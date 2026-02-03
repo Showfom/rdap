@@ -2,7 +2,7 @@
 name = "rdap"
 version = "0.2.0"
 edition = "2024"
-authors = ["Akaere Networks", "Showfom"]
+authors = ["xTom", "Akaere Networks"]
 description = "A modern RDAP (Registration Data Access Protocol) client"
 license = "MIT"
 
