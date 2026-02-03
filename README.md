@@ -2,7 +2,7 @@
 
 A modern, elegant RDAP (Registration Data Access Protocol) client written in Rust with beautiful colored output.
 
-Forked from [Akaere-NetWorks/rdap](https://github.com/Akaere-NetWorks/rdap), add more features and fix bugs.
+Forked from [xtomcom/rdap](https://github.com/xtomcom/rdap), add more features and fix bugs.
 
 ## Features
 
@@ -298,7 +298,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdap = { git = "https://github.com/Akaere-NetWorks/rdap.git" }
+rdap = { git = "https://github.com/xtomcom/rdap.git" }
 tokio = { version = "1.49", features = ["full"] }
 ```
 
@@ -763,7 +763,7 @@ xTom & Akaere Networks
 
 ## Links
 
-- Original RDAP version: https://github.com/Akaere-NetWorks/rdap
+- Original Go version: https://github.com/openrdap/rdap
 - Original Go version: https://github.com/openrdap/rdap
 - IANA RDAP Bootstrap: https://data.iana.org/rdap/
 - RDAP Working Group: https://datatracker.ietf.org/wg/weirds/
