@@ -78,7 +78,10 @@ impl Default for CacheConfig {
 
 /// Get the user config directory path (~/.config/rdap/)
 pub fn user_config_dir() -> Result<PathBuf> {
-    let dir = std::env::var("HOME").map_or_else(|_| PathBuf::from(".config/rdap"), |h| PathBuf::from(h).join(".config/rdap"));
+    let dir = std::env::var("HOME").map_or_else(
+        |_| PathBuf::from(".config/rdap"),
+        |h| PathBuf::from(h).join(".config/rdap"),
+    );
     Ok(dir)
 }
 

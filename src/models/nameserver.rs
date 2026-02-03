@@ -1,6 +1,6 @@
 //! Nameserver model
 
-use super::{Notice, Entity, Status, Remark, Link, Event};
+use super::{Entity, Event, Link, Notice, Remark, Status};
 use serde::{Deserialize, Serialize};
 
 /// Nameserver information

@@ -14,7 +14,10 @@ pub struct Cache {
 impl Cache {
     /// Create a new cache (~/.cache/rdap/ on all platforms)
     pub fn new() -> Result<Self> {
-        let cache_dir = std::env::var("HOME").map_or_else(|_| PathBuf::from(".cache/rdap"), |h| PathBuf::from(h).join(".cache/rdap"));
+        let cache_dir = std::env::var("HOME").map_or_else(
+            |_| PathBuf::from(".cache/rdap"),
+            |h| PathBuf::from(h).join(".cache/rdap"),
+        );
 
         fs::create_dir_all(&cache_dir)?;
 

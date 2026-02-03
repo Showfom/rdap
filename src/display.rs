@@ -1,6 +1,9 @@
 //! Beautiful colored output for RDAP objects
 
-use crate::models::{RdapObject, Entity, IpNetwork, Autnum, Domain, Nameserver, ErrorResponse, DomainSearchResults, EntitySearchResults, NameserverSearchResults, HelpResponse, Notice};
+use crate::models::{
+    Autnum, Domain, DomainSearchResults, Entity, EntitySearchResults, ErrorResponse, HelpResponse,
+    IpNetwork, Nameserver, NameserverSearchResults, Notice, RdapObject,
+};
 use colored::Colorize;
 use std::collections::HashMap;
 

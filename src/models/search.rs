@@ -1,6 +1,6 @@
 //! Search result models
 
-use super::{Notice, Domain, Entity, Nameserver};
+use super::{Domain, Entity, Nameserver, Notice};
 use serde::{Deserialize, Serialize};
 
 /// Domain search results

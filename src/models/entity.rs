@@ -1,6 +1,6 @@
 //! Entity (person/organization) model
 
-use super::{Notice, VCard, PublicId, Remark, Link, Event, Status, IpNetwork, Autnum};
+use super::{Autnum, Event, IpNetwork, Link, Notice, PublicId, Remark, Status, VCard};
 use serde::{Deserialize, Serialize};
 
 /// Entity representing a person or organization

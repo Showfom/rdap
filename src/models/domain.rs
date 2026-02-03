@@ -1,6 +1,6 @@
 //! Domain object model
 
-use super::{Notice, Nameserver, Entity, Status, PublicId, Remark, Link, Event, IpNetwork};
+use super::{Entity, Event, IpNetwork, Link, Nameserver, Notice, PublicId, Remark, Status};
 use serde::{Deserialize, Serialize};
 
 /// Domain name registration information
