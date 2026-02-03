@@ -87,6 +87,36 @@ jobs:
           mkdir -p repo
           gpg --armor --export ${{ env.GPG_KEY_ID }} > repo/xtom.key
 
+      - name: Setup SSH for rsync
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H rsync.repo.xtom.com >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Pull existing packages from server
+        run: |
+          # Pull existing deb pool (to include other projects' packages)
+          mkdir -p repo/deb/pool
+          rsync -avz --ignore-missing-args \
+            ${{ secrets.REMOTE_USER }}@rsync.repo.xtom.com:${{ env.REPO_PATH }}/deb/pool/ \
+            repo/deb/pool/ || echo "No existing deb pool found"
+
+          # Pull existing rpm packages
+          for EL_VERSION in el8 el9 el10; do
+            mkdir -p repo/rpm/$EL_VERSION/x86_64/Packages
+            mkdir -p repo/rpm/$EL_VERSION/aarch64/Packages
+            rsync -avz --ignore-missing-args \
+              ${{ secrets.REMOTE_USER }}@rsync.repo.xtom.com:${{ env.REPO_PATH }}/rpm/$EL_VERSION/x86_64/Packages/ \
+              repo/rpm/$EL_VERSION/x86_64/Packages/ || true
+            rsync -avz --ignore-missing-args \
+              ${{ secrets.REMOTE_USER }}@rsync.repo.xtom.com:${{ env.REPO_PATH }}/rpm/$EL_VERSION/aarch64/Packages/ \
+              repo/rpm/$EL_VERSION/aarch64/Packages/ || true
+          done
+
+          echo "=== Existing packages pulled ==="
+          find repo -name "*.deb" -o -name "*.rpm" | head -20
+
       - name: Build DEB repository
         run: |
           VERSION=${{ steps.version.outputs.version }}
@@ -96,24 +126,33 @@ jobs:
           mkdir -p repo/deb/dists/stable/main/binary-amd64
           mkdir -p repo/deb/dists/stable/main/binary-arm64
 
-          # Copy deb packages to pool
+          # Copy new deb packages to pool
           cp artifacts/deb/*_amd64.deb repo/deb/pool/main/r/rdap/ || true
           cp artifacts/deb/*_arm64.deb repo/deb/pool/main/r/rdap/ || true
 
-          # Generate Packages files
+          # Generate Packages files (includes ALL packages in pool)
           cd repo/deb
 
           # amd64
           dpkg-scanpackages --arch amd64 pool/ > dists/stable/main/binary-amd64/Packages
-          gzip -k dists/stable/main/binary-amd64/Packages
+          gzip -k -f dists/stable/main/binary-amd64/Packages
 
           # arm64
           dpkg-scanpackages --arch arm64 pool/ > dists/stable/main/binary-arm64/Packages
-          gzip -k dists/stable/main/binary-arm64/Packages
+          gzip -k -f dists/stable/main/binary-arm64/Packages
 
-          # Generate Release file
+          # Generate Release file with proper metadata
           cd dists/stable
-          apt-ftparchive release . > Release
+          cat > Release << EOF
+          Origin: xTom
+          Label: xTom Repository
+          Suite: stable
+          Codename: stable
+          Architectures: amd64 arm64
+          Components: main
+          Description: xTom Package Repository
+          $(apt-ftparchive release .)
+          EOF
 
           # Sign Release file
           gpg --batch --yes --armor --detach-sign --output Release.gpg Release
